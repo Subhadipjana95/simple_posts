@@ -8,7 +8,14 @@ const uploadImage = require('./services/storage.service');
 
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
-app.use(cors({ origin: process.env.FRONTEND_URL }));
+
+const frontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : "*";
+
+app.use(cors({ 
+    origin: frontendUrl,
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true
+}));
 
 app.get('/feeds', async (req, res) => {
     try {
