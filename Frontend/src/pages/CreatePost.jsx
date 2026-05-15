@@ -1,11 +1,14 @@
 import React, { useState, useRef } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const CreatePost = () => {
   const [caption, setCaption] = useState("");
   const [username, setUsername] = useState("");
   const [preview, setPreview] = useState(null);
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   const handleImageChange = (e) => {
@@ -24,6 +27,34 @@ const CreatePost = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!preview) {
+      alert("Please select an image.");
+      return;
+    }
+
+    const formData = new FormData();
+    const file = fileInputRef.current.files[0];
+    
+    formData.append("image", file);
+    formData.append("caption", caption);
+    formData.append("user", username || "Anonymous");
+
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/create-post`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      navigate('/');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to create post. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center pt-2 pb-4 px-2 sm:p-6 font-sans overflow-x-hidden">
       <div className="w-full max-w-120 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800/50 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden px-4 py-3 sm:p-8">
@@ -36,7 +67,7 @@ const CreatePost = () => {
           </p>
         </div>
 
-        <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           {/* Media Upload Area */}
           <div
             onClick={() => !preview && fileInputRef.current?.click()}
@@ -100,12 +131,12 @@ const CreatePost = () => {
           {/* Caption Input */}
           <div className="group flex flex-col gap-2">
             <label className="text-sm font-medium text-zinc-400 group-focus-within:text-blue-400 transition-colors px-1">
-              Tell Your Narrative
+              Show the Vibe
             </label>
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder="Write a captivating story..."
+              placeholder="Reveal your vibes..."
               className="w-full bg-zinc-800/30 border border-zinc-800 rounded-xl sm:rounded-2xl px-4 sm:px-5 py-3 sm:py-4 min-h-30 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all placeholder:text-zinc-600 text-sm sm:text-base text-zinc-200"
             />
           </div>
@@ -125,19 +156,21 @@ const CreatePost = () => {
             />
           </div>
 
-          {/* Submit Button */}
+          
 
           <div className="flex justify-between gap-2 flec-row-reverse">
-            <Link to="/feeds">
+            <Link to="/">
               <p className="text-center text-base px-3 text-zinc-500 hover:text-blue-400  py-4 border border-zinc-800 rounded-lg flex items-center justify-center gap-3 transition-all active:scale-[0.98]">
                 Explore Feeds
               </p>
             </Link>
+
+            {/* Submit Button */}
             <button
               type="submit"
               className="group relative px-3 bg-blue-500/60 hover:bg-blue-500 text-white/70 font-semibold py-4 rounded-lg flex flex-1 items-center justify-center gap-3 transition-all active:scale-[0.98]"
             >
-              <span className="text-base tracking-tight">Publish Content</span>
+              <span className="text-base tracking-tight">Share Vibe</span>
             </button>
           </div>
         </form>

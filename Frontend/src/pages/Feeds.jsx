@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Heart,
   MessageCircle,
@@ -8,54 +8,42 @@ import {
   Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const demoPosts = [
-  {
-    id: 1,
-    user: "creative_mind",
-    image:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
-    caption:
-      "Midnight abstractions and digital dreamscapes. Exploring the boundaries of color and light in the neo-minimalist era.",
-    likes: 124,
-    createdAt: "2024-05-15T10:00:00Z",
-  },
-  {
-    id: 2,
-    user: "urban_explorer",
-    image:
-      "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=800&q=80",
-    caption:
-      "The city never sleeps, and neither do the shadows. Captured this perspective during my early morning walk through the financial district.",
-    likes: 89,
-    createdAt: "2024-05-14T18:30:00Z",
-  },
-  {
-    id: 3,
-    user: "nature_spirit",
-    image:
-      "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80",
-    caption:
-      "Inhale the future, exhale the past. There is a hidden language in the way the mist crawls over the valley.",
-    likes: 215,
-    createdAt: "2024-05-14T07:15:00Z",
-  },
-];
+import axios from "axios";
 
 const PostCard = ({ post }) => {
-  const [likes, setLikes] = React.useState(post.likes);
-  const [isLiked, setIsLiked] = React.useState(false);
+  const [likes, setLikes] = useState(post.likes || 0);
+  const [isLiked, setIsLiked] = useState(false);
 
-  const handleLike = () => {
-    if (isLiked) {
-      setLikes((prev) => prev - 1);
-    } else {
-      setLikes((prev) => prev + 1);
-    }
+  const handleLike = async () => {
+    const action = isLiked ? 'unlike' : 'like';
+    const originalLikes = likes;
+    const originalIsLiked = isLiked;
+
+    // Optimistic update
+    setLikes(prev => isLiked ? prev - 1 : prev + 1);
     setIsLiked(!isLiked);
+
+    try {
+      await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/posts/${post._id}/like`, { action });
+      
+      // Update local storage for persistence on this device
+      const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "[]");
+      if (action === 'like') {
+        localStorage.setItem("likedPosts", JSON.stringify([...likedPosts, post._id]));
+      } else {
+        localStorage.setItem("likedPosts", JSON.stringify(likedPosts.filter(id => id !== post._id)));
+      }
+    } catch (err) {
+      console.error("Failed to update like:", err);
+      // Revert on error
+      setLikes(originalLikes);
+      setIsLiked(originalIsLiked);
+    }
   };
 
+  // Format Date String into Date & Time
   const formatDate = (dateString) => {
+    if (!dateString) return "Just now";
     const date = new Date(dateString);
     const datePart = date.toLocaleDateString("en-US", {
       month: "short",
@@ -69,14 +57,20 @@ const PostCard = ({ post }) => {
     return `${datePart} • ${timePart}`;
   };
 
+  // Generate initial letters for avatar
   const getInitials = (name) => {
-    if (!name) return "";
+    if (!name) return "??";
     const parts = name.split(/[_\s.-]/).filter(Boolean);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     return name.slice(0, 2).toUpperCase();
   };
+
+  useEffect(() => {
+    const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "[]");
+    setIsLiked(likedPosts.includes(post._id));
+  }, [post._id]);
 
   return (
     <div className="w-full bg-zinc-900/40 backdrop-blur-md border border-zinc-800/50 rounded-xl overflow-hidden transition-all hover:border-zinc-700/50">
@@ -133,9 +127,25 @@ const PostCard = ({ post }) => {
 };
 
 const Feeds = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios.get(`${import.meta.env.VITE_BACKEND_URL}/feeds`)
+      .then((response) => {
+        setPosts(response.data);
+      })
+      .catch((err) => {
+        console.error("Fetch error:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans pb-20">
-      {/* Navigation / Header */}
+      {/* Header */}
       <header className="sticky top-0 z-50 w-full bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-900 px-6 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <h1 className="text-2xl font-medium tracking-tighter bg-linear-to-r from-white to-zinc-500 bg-clip-text text-transparent">
@@ -155,9 +165,21 @@ const Feeds = () => {
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 pt-8 space-y-8">
-        {demoPosts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center pt-20 gap-4">
+             <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+             <p className="text-zinc-500 text-sm animate-pulse">Syncing vibes...</p>
+          </div>
+        ) : posts.length > 0 ? (
+          posts.map((p) => (
+            <PostCard key={p._id} post={p} />
+          ))
+        ) : (
+          <div className="text-center pt-20">
+            <p className="text-zinc-500">No thoughts shared yet.</p>
+            <Link to="/create-post" className="text-blue-400 text-sm mt-2 inline-block">Be the first</Link>
+          </div>
+        )}
       </main>
     </div>
   );
