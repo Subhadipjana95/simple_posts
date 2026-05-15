@@ -20,8 +20,10 @@
   },
   "homepage": "https://github.com/Subhadipjana95/simple_posts#readme",
   "dependencies": {
+    "@imagekit/nodejs": "^7.6.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mongoose": "^9.6.2"
+    "mongoose": "^9.6.2",
+    "multer": "^2.1.1"
   }
 }
