@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Heart,
-  MessageCircle,
-  Share2,
-  MoreHorizontal,
-  User,
-  Plus,
+  Plus
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
